@@ -1,5 +1,4 @@
 def bipolarize(mat):
-    """Convierte una matriz 0/1 a vector bipolar (-1, 1)."""
     v = []
     for fila in mat:
         for x in fila:
@@ -7,9 +6,7 @@ def bipolarize(mat):
     return v
 
 def reshape(vec, filas, cols):
-    """Convierte vector a matriz filas x cols."""
-    mat = []
-    k = 0
+    mat, k = [], 0
     for i in range(filas):
         fila = []
         for j in range(cols):
@@ -35,8 +32,7 @@ def add_matrices(A, B):
     return M
 
 def zero_diagonal(M):
-    n = len(M)
-    for i in range(n):
+    for i in range(len(M)):
         M[i][i] = 0
     return M
 
@@ -53,7 +49,7 @@ def matrix_vector_mul(M, v):
 def activation(v):
     return [1 if x >= 0 else -1 for x in v]
 
-
+# --- Red Hopfield ---
 
 class Hopfield:
     def __init__(self, filas, cols):
@@ -78,72 +74,60 @@ class Hopfield:
             state = new_state
         return reshape(state, self.filas, self.cols)
 
+# --- Lectura de patrones desde archivo TXT ---
 
+def cargar_patrones(nombre_archivo):
+    patrones = {}
+    with open(nombre_archivo, 'r') as f:
+        lineas = f.readlines()
+
+    nombre = None
+    figura = []
+    for linea in lineas:
+        linea = linea.strip()
+        if not linea:
+            if nombre and figura:
+                patrones[nombre] = [[int(c) for c in fila] for fila in figura]
+                figura = []
+            continue
+        if linea.startswith("#"):
+            nombre = linea[1:].strip()
+        else:
+            figura.append(linea)
+    if nombre and figura:
+        patrones[nombre] = [[int(c) for c in fila] for fila in figura]
+    return patrones
+
+# --- DEMO PRINCIPAL ---
 
 if __name__ == "__main__":
+    # Cargar figuras desde archivo
+    archivo = "patrones.txt"
+    patrones = cargar_patrones(archivo)
 
-    #matrices hechas con ayuda de IA (chatGPT)
-    STAR = [
-        [0,0,1,0,0],
-        [0,1,1,1,0],
-        [1,1,1,1,1],
-        [0,1,1,1,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0]
-    ]
-
-    SLASH = [
-        [0,0,0,0,1],
-        [0,0,0,1,0],
-        [0,0,1,0,0],
-        [0,1,0,0,0],
-        [1,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0]
-    ]
-
-    QUESTION = [
-        [0,1,1,1,0],
-        [1,0,0,0,1],
-        [0,0,0,0,1],
-        [0,0,0,1,0],
-        [0,0,1,0,0],
-        [0,0,0,0,0],
-        [0,0,1,0,0],
-        [0,0,0,0,0]
-    ]
-
-    PLUS = [
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0]
-    ]
-
+    # Crear red 8x5
     net = Hopfield(8, 5)
-    net.train([STAR, SLASH, QUESTION, PLUS])
+    net.train(list(patrones.values()))
 
-    noisy = [fila[:] for fila in QUESTION]
+    # Mostrar los patrones cargados
+    print("Patrones cargados desde archivo:\n")
+    for nombre, figura in patrones.items():
+        print(f"Figura: {nombre}")
+        for fila in figura:
+            print(''.join(['#' if x==1 else '.' for x in fila]))
+        print()
+
+    # Probar con ruido en '?'
+    noisy = [fila[:] for fila in patrones["QUESTION"]]
     noisy[1][1] = 1
-    noisy[2][2] = 1
+    noisy[2][3] = 1
 
-    print("Patrón original (?):")
-    for fila in QUESTION:
-        print(''.join(['#' if x==1 else '.' for x in fila]))
-
-    print("\nPatrón ruidoso:")
+    print("Patrón ruidoso (?):")
     for fila in noisy:
         print(''.join(['#' if x==1 else '.' for x in fila]))
 
     result = net.recall(noisy)
 
-    print("\nResultado de la red:")
+    print("\nResultado tras recuperación:")
     for fila in result:
         print(''.join(['#' if x==1 else '.' for x in fila]))
